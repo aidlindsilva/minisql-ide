@@ -1,3 +1,3 @@
-# tinyscript-ide
-A simple browser runnable ide that can be used to write and compile code directly on your browser!
+# minisql-ide
+A simple browser runnable sql ide that is capable of running simple sql commands right on your browser!
 https://aidlindsilva.github.io/tinyscript-ide/
