@@ -108,10 +108,6 @@ while (x <= target) {
     </div>
 
     <script>
-        // =====================================================================
-        // 1. LEXER (Tokenizer)
-        // Breaks raw text strings into meaningful token objects.
-        // =====================================================================
         const TOKEN_TYPES = {
             KEYWORD: 'KEYWORD', IDENTIFIER: 'IDENTIFIER', NUMBER: 'NUMBER', 
             STRING: 'STRING', ASSIGN: 'ASSIGN', OPERATOR: 'OPERATOR', 
@@ -123,35 +119,24 @@ while (x <= target) {
                 this.source = source;
                 this.cursor = 0;
             }
-
             peek() { return this.source[this.cursor] || null; }
             advance() { return this.source[this.cursor++]; }
-
             tokenize() {
                 const tokens = [];
                 const keywords = ['let', 'print', 'if', 'else', 'while'];
-
                 while (this.cursor < this.source.length) {
                     let char = this.peek();
-
-                    // Skip whitespace
                     if (/\s/.test(char)) { this.advance(); continue; }
-
-                    // Skip Comments
                     if (char === '#') {
                         while (this.peek() && this.peek() !== '\n') this.advance();
                         continue;
                     }
-
-                    // Numeric Constants
                     if (/\d/.test(char)) {
                         let num = '';
                         while (this.peek() && /\d/.test(this.peek())) num += this.advance();
                         tokens.push({ type: TOKEN_TYPES.NUMBER, value: parseInt(num) });
                         continue;
                     }
-
-                    // Identifiers & Keywords
                     if (/[a-zA-Z]/.test(char)) {
                         let str = '';
                         while (this.peek() && /[a-zA-Z0-9]/.test(this.peek())) str += this.advance();
@@ -162,71 +147,48 @@ while (x <= target) {
                         }
                         continue;
                     }
-
-                    // String Literals
                     if (char === '"') {
-                        this.advance(); // Skip opening quote
+                        this.advance();
                         let str = '';
                         while (this.peek() && this.peek() !== '"') str += this.advance();
-                        this.advance(); // Skip closing quote
+                        this.advance();
                         tokens.push({ type: TOKEN_TYPES.STRING, value: str });
                         continue;
                     }
-
-                    // Double character operators (==, <=, >=)
                     if (char === '=' || char === '<' || char === '>') {
                         let op = this.advance();
-                        if (this.peek() === '=') {
-                            op += this.advance();
-                        }
-                        tokens.push({ 
-                            type: op === '=' ? TOKEN_TYPES.ASSIGN : TOKEN_TYPES.OPERATOR, 
-                            value: op 
-                        });
+                        if (this.peek() === '=') op += this.advance();
+                        tokens.push({ type: op === '=' ? TOKEN_TYPES.ASSIGN : TOKEN_TYPES.OPERATOR, value: op });
                         continue;
                     }
-
-                    // Single character operators
                     if (['+', '-', '*', '/'].includes(char)) {
                         tokens.push({ type: TOKEN_TYPES.OPERATOR, value: this.advance() });
                         continue;
                     }
-
-                    // Punctuation
                     if ([';', '(', ')', '{', '}'].includes(char)) {
                         tokens.push({ type: TOKEN_TYPES.PUNCTUATION, value: this.advance() });
                         continue;
                     }
-
                     throw new Error(`Lexer Error: Unexpected character '${char}'`);
                 }
-
                 tokens.push({ type: TOKEN_TYPES.EOF, value: null });
                 return tokens;
             }
         }
 
-        // =====================================================================
-        // 2. PARSER
-        // Transforms linear tokens into an Abstract Syntax Tree (AST) structure.
-        // =====================================================================
         class Parser {
             constructor(tokens) {
                 this.tokens = tokens;
                 this.cursor = 0;
             }
-
             peek() { return this.tokens[this.cursor]; }
             advance() { return this.tokens[this.cursor++]; }
             match(type, value) {
                 const token = this.peek();
-                if (!token) return false;
-                if (type && token.type !== type) return false;
-                if (value && token.value !== value) return false;
+                if (!token || (type && token.type !== type) || (value && token.value !== value)) return false;
                 this.advance();
                 return true;
             }
-
             parse() {
                 const statements = [];
                 while (this.peek().type !== TOKEN_TYPES.EOF) {
@@ -234,30 +196,151 @@ while (x <= target) {
                 }
                 return { type: 'Program', body: statements };
             }
-
             parseStatement() {
                 const token = this.peek();
-
                 if (token.type === TOKEN_TYPES.KEYWORD) {
                     if (token.value === 'let') return this.parseVarDeclaration();
                     if (token.value === 'print') return this.parsePrintStatement();
                     if (token.value === 'if') return this.parseIfStatement();
                     if (token.value === 'while') return this.parseWhileStatement();
                 }
-
-                // Fallback to reassignment assignment check
-                if (token.type === TOKEN_TYPES.IDENTIFIER) {
-                    return this.parseAssignment();
-                }
-
+                if (token.type === TOKEN_TYPES.IDENTIFIER) return this.parseAssignment();
                 throw new Error(`Parser Error: Unexpected token "${token.value}"`);
             }
-
             parseVarDeclaration() {
-                this.advance(); // consume 'let'
+                this.advance();
                 const idToken = this.advance();
                 this.match(TOKEN_TYPES.ASSIGN, '=');
                 const valExpression = this.parseExpression();
                 this.match(TOKEN_TYPES.PUNCTUATION, ';');
                 return { type: 'VariableDeclaration', id: idToken.value, init: valExpression };
             }
+            parseAssignment() {
+                const idToken = this.advance();
+                this.match(TOKEN_TYPES.ASSIGN, '=');
+                const valExpression = this.parseExpression();
+                this.match(TOKEN_TYPES.PUNCTUATION, ';');
+                return { type: 'Assignment', id: idToken.value, value: valExpression };
+            }
+            parsePrintStatement() {
+                this.advance();
+                this.match(TOKEN_TYPES.PUNCTUATION, '(');
+                const expr = this.parseExpression();
+                this.match(TOKEN_TYPES.PUNCTUATION, ')');
+                this.match(TOKEN_TYPES.PUNCTUATION, ';');
+                return { type: 'PrintStatement', expression: expr };
+            }
+            parseIfStatement() {
+                this.advance();
+                this.match(TOKEN_TYPES.PUNCTUATION, '(');
+                const test = this.parseExpression();
+                this.match(TOKEN_TYPES.PUNCTUATION, ')');
+                this.match(TOKEN_TYPES.PUNCTUATION, '{');
+                const consequent = [];
+                while (this.peek().value !== '}') consequent.push(this.parseStatement());
+                this.match(TOKEN_TYPES.PUNCTUATION, '}');
+                let alternate = null;
+                if (this.peek().value === 'else') {
+                    this.advance();
+                    this.match(TOKEN_TYPES.PUNCTUATION, '{');
+                    alternate = [];
+                    while (this.peek().value !== '}') alternate.push(this.parseStatement());
+                    this.match(TOKEN_TYPES.PUNCTUATION, '}');
+                }
+                return { type: 'IfStatement', test, consequent, alternate };
+            }
+            parseWhileStatement() {
+                this.advance();
+                this.match(TOKEN_TYPES.PUNCTUATION, '(');
+                const test = this.parseExpression();
+                this.match(TOKEN_TYPES.PUNCTUATION, ')');
+                this.match(TOKEN_TYPES.PUNCTUATION, '{');
+                const body = [];
+                while (this.peek().value !== '}') body.push(this.parseStatement());
+                this.match(TOKEN_TYPES.PUNCTUATION, '}');
+                return { type: 'WhileStatement', test, body };
+            }
+            parseExpression() {
+                let left = this.parsePrimary();
+                while (this.peek().type === TOKEN_TYPES.OPERATOR) {
+                    let op = this.advance().value;
+                    let right = this.parsePrimary();
+                    left = { type: 'BinaryExpression', operator: op, left, right };
+                }
+                return left;
+            }
+            parsePrimary() {
+                const token = this.advance();
+                if (token.type === TOKEN_TYPES.NUMBER || token.type === TOKEN_TYPES.STRING) return { type: 'Literal', value: token.value };
+                if (token.type === TOKEN_TYPES.IDENTIFIER) return { type: 'Identifier', name: token.value };
+                throw new Error(`Parser Error: Expected variable or value but got "${token.value}"`);
+            }
+        }
+
+        class Interpreter {
+            constructor() {
+                this.environment = {}; 
+                this.consoleOutput = [];
+            }
+            execute(node) {
+                switch(node.type) {
+                    case 'Program': for (let stmt of node.body) this.execute(stmt); break;
+                    case 'VariableDeclaration': this.environment[node.id] = this.evaluate(node.init); break;
+                    case 'Assignment':
+                        if (!(node.id in this.environment)) throw new Error(`Runtime Error: Variable "${node.id}" is not defined.`);
+                        this.environment[node.id] = this.evaluate(node.value);
+                        break;
+                    case 'PrintStatement': this.consoleOutput.push(this.evaluate(node.expression)); break;
+                    case 'IfStatement':
+                        if (this.evaluate(node.test)) {
+                            for (let stmt of node.consequent) this.execute(stmt);
+                        } else if (node.alternate) {
+                            for (let stmt of node.alternate) this.execute(stmt);
+                        }
+                        break;
+                    case 'WhileStatement':
+                        let safety = 0;
+                        while (this.evaluate(node.test)) {
+                            if (++safety > 5000) throw new Error("Runtime Error: Infinite Loop detected!");
+                            for (let stmt of node.body) this.execute(stmt);
+                        }
+                        break;
+                }
+            }
+            evaluate(node) {
+                switch(node.type) {
+                    case 'Literal': return node.value;
+                    case 'Identifier':
+                        if (!(node.name in this.environment)) throw new Error(`Runtime Error: Undefined variable "${node.name}"`);
+                        return this.environment[node.name];
+                    case 'BinaryExpression':
+                        const left = this.evaluate(node.left);
+                        const right = this.evaluate(node.right);
+                        switch(node.operator) {
+                            case '+': return left + right; case '-': return left - right;
+                            case '*': return left * right; case '/': return left / right;
+                            case '==': return left === right; case '<=': return left <= right;
+                            case '>=': return left >= right; case '<': return left < right;
+                            case '>': return left > right;
+                        }
+                }
+            }
+        }
+
+        function runCode() {
+            const consoleDiv = document.getElementById('console');
+            consoleDiv.innerHTML = "Compiling and executing...\n";
+            const rawCode = document.getElementById('editor').value;
+            try {
+                const tokens = new Lexer(rawCode).tokenize();
+                const ast = new Parser(tokens).parse();
+                const interpreter = new Interpreter();
+                interpreter.execute(ast);
+                consoleDiv.innerHTML = interpreter.consoleOutput.join('\n');
+            } catch (err) {
+                consoleDiv.innerHTML = `<span class="error">${err.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
