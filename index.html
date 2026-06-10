@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Markdown Parser IDE</title>
+    <title>Full Relational SQL Database Engine</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
+            background-color: #0c0f12;
+            color: #f0f3f6;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -16,7 +16,7 @@
             height: 100vh;
             box-sizing: border-box;
         }
-        h2 { margin-top: 0; color: #ff79c6; }
+        h2 { margin-top: 0; color: #38bdf8; }
         .container {
             display: flex;
             flex: 1;
@@ -31,160 +31,276 @@
         label {
             font-weight: bold;
             margin-bottom: 5px;
-            color: #6272a4;
+            color: #94a3b8;
         }
         textarea {
             flex: 1;
-            background-color: #282a36;
-            color: #f8f8f2;
-            border: 1px solid #44475a;
+            background-color: #1e293b;
+            color: #38bdf8;
+            border: 1px solid #334155;
             border-radius: 6px;
             padding: 15px;
             font-family: 'Fira Code', 'Courier New', monospace;
-            font-size: 16px;
+            font-size: 14px;
             resize: none;
             outline: none;
         }
-        textarea:focus { border-color: #ff79c6; }
-        #preview-window {
+        textarea:focus { border-color: #38bdf8; }
+        #output-container {
             flex: 1;
-            background-color: #ffffff;
-            color: #2b2b2b;
-            border: 1px solid #44475a;
+            background-color: #0f172a;
+            border: 1px solid #334155;
             border-radius: 6px;
-            padding: 20px;
+            padding: 15px;
             overflow-y: auto;
         }
-        
-        /* Render Style Accents for the Live Preview Output Document Container */
-        #preview-window h1 { border-bottom: 2px solid #eaecef; padding-bottom: 5px; color: #111; margin-top: 0; }
-        #preview-window h2 { border-bottom: 1px solid #eaecef; padding-bottom: 3px; color: #222; }
-        #preview-window blockquote { border-left: 4px solid #ff79c6; background-color: #f6f8fa; margin: 10px 0; padding: 1px 15px; color: #6a737d; font-style: italic; }
-        #preview-window ul { padding-left: 20px; }
-        #preview-window strong { color: #000; font-weight: 700; }
-        #preview-window p { line-height: 1.6; }
+        button {
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0369a1; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background-color: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        th, td {
+            border: 1px solid #334155;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th { background-color: #0f172a; color: #38bdf8; }
+        .error { color: #ef4444; font-family: monospace; padding: 5px 0; }
+        .success { color: #10b981; font-family: monospace; margin-bottom: 6px; }
     </style>
 </head>
 <body>
 
-    <h2>Live Markdown Engine IDE</h2>
+    <h2>Full Relational SQL Engine</h2>
     
     <div class="container">
         <div class="panel">
-            <label for="editor">Raw Markdown Input Workspace:</label>
-            <textarea id="editor" spellcheck="false" oninput="parseLiveDocument()">
-# Project Workspace Documentation
+            <label for="editor">Relational Database Script (SQL):</label>
+            <textarea id="editor" spellcheck="false">
+-- 1. Create primary master table
+CREATE TABLE students (sid PRIMARY KEY, name, branch);
 
-Welcome to your live **Markdown Custom Parsing Engine** built entirely from scratch using client-side algorithms!
+INSERT INTO students VALUES (101, "Aemilia", "CS");
+INSERT INTO students VALUES (102, "Rahul", "IT");
+INSERT INTO students VALUES (103, "Hannah", "CS");
 
-## Key Engine Features Supported:
-* High performance real-time regex string pipeline conversion.
-* Custom structural layout rendering context arrays.
-* Clean visual encapsulation of raw string text states.
+-- 2. Create secondary reference relational table
+CREATE TABLE grades (sid, subject, marks);
 
-> "The best way to predict the future is to invent it." - Alan Kay
+INSERT INTO grades VALUES (101, "Data Structures", 95);
+INSERT INTO grades VALUES (102, "DBMS", 88);
+INSERT INTO grades VALUES (103, "Algorithms", 91);
 
-Try typing anywhere inside this workspace block or edit this text layout view directly!
+-- 3. Run a multi-table relational INNER JOIN query match
+SELECT students.name, grades.subject, grades.marks 
+FROM students 
+INNER JOIN grades ON students.sid == grades.sid;
             </textarea>
+            <button onclick="runSQLScript()">Execute Relational Engine</button>
         </div>
 
         <div class="panel">
-            <label>Live Rendered HTML Output Document:</label>
-            <div id="preview-window"></div>
+            <label>Relational Query Output Terminal:</label>
+            <div id="output-container"></div>
         </div>
     </div>
 
     <script>
-        class MarkdownParser {
+        class FullSQLDatabase {
             constructor() {
-                this.inList = false; // Layout context state validator flag
+                this.tables = {};
             }
 
-            parse(text) {
-                const lines = text.split('\n');
-                let htmlOutput = [];
-                this.inList = false;
-
-                for (let line of lines) {
-                    let cleanLine = line.trim();
-
-                    // 1. Handle Unordered Bullet List Array States Block Closures
-                    if (cleanLine.startsWith('* ') || cleanLine.startsWith('- ')) {
-                        if (!this.inList) {
-                            htmlOutput.push('<ul>');
-                            this.inList = true;
-                        }
-                        let content = cleanLine.slice(2);
-                        htmlOutput.push(`<li>${this.parseInlineStyles(content)}</li>`);
-                        continue;
-                    } else {
-                        // If we were inside a bullet list block, close the tag context state container
-                        if (this.inList) {
-                            htmlOutput.push('</ul>');
-                            this.inList = false;
-                        }
-                    }
-
-                    // 2. Handle Empty Whitespace Spacer Blocks lines
-                    if (cleanLine === '') {
-                        continue;
-                    }
-
-                    // 3. Structural Block Heading Elements 
-                    if (cleanLine.startsWith('# ')) {
-                        htmlOutput.push(`<h1>${this.parseInlineStyles(cleanLine.slice(2))}</h1>`);
-                    } 
-                    else if (cleanLine.startsWith('## ')) {
-                        htmlOutput.push(`<h2>${this.parseInlineStyles(cleanLine.slice(3))}</h2>`);
-                    } 
-                    else if (cleanLine.startsWith('### ')) {
-                        htmlOutput.push(`<h3>${this.parseInlineStyles(cleanLine.slice(4))}</h3>`);
-                    }
-                    // 4. Blockquote Structural Panels Container Elements
-                    else if (cleanLine.startsWith('> ')) {
-                        htmlOutput.push(`blockquote>${this.parseInlineStyles(cleanLine.slice(2))}</blockquote`);
-                    }
-                    // 5. Default Standard Text Paragraph Elements Block Fallbacks
-                    else {
-                        htmlOutput.push(`<p>${this.parseInlineStyles(line)}</p>`);
-                    }
-                }
-
-                // Append terminal closing tags if page ends abruptly while in list state pointer tracking
-                if (this.inList) {
-                    htmlOutput.push('</ul>');
-                }
-
-                return htmlOutput.join('\n');
+            execute(queryStr) {
+                const cleanQuery = queryStr.trim().replace(/\s+/g, ' ');
+                const upperQuery = cleanQuery.toUpperCase();
+                
+                if (upperQuery.startsWith('CREATE TABLE')) return this.handleCreate(cleanQuery);
+                if (upperQuery.startsWith('INSERT INTO')) return this.handleInsert(cleanQuery);
+                if (upperQuery.startsWith('SELECT')) return this.handleSelect(cleanQuery);
+                
+                throw new Error(`Syntax Error: Unsupported statement initialization.`);
             }
 
-            // Sub-Parser parsing regex inline rules transformations matching text values (e.g. bold highlights)
-            parseInlineStyles(text) {
-                let formattedText = text;
+            handleCreate(query) {
+                const match = query.match(/CREATE\s+TABLE\s+(\w+)\s*\((.*)\)/i);
+                if (!match) throw new Error("SQL Syntax Error: Invalid CREATE TABLE structure.");
                 
-                // Bold Transform: Replace pairs of double-asterisks with strong tags
-                // Regex pattern catches matching **pairs** across inline context streams
-                formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                const tableName = match[1].toLowerCase();
+                const rawCols = match[2].split(',');
                 
-                return formattedText;
+                let columns = [];
+                let primaryKey = null;
+
+                rawCols.forEach(col => {
+                    let parts = col.trim().split(/\s+/);
+                    let colName = parts[0].toLowerCase();
+                    columns.push(colName);
+                    if (parts.length > 1 && parts.slice(1).join(' ').toUpperCase().includes('PRIMARY KEY')) {
+                        primaryKey = colName;
+                    }
+                });
+
+                this.tables[tableName] = { columns, primaryKey, rows: [] };
+                return { type: 'MSG', text: `Table "${tableName}" initialized successfully.` };
+            }
+
+            handleInsert(query) {
+                const match = query.match(/INSERT\s+INTO\s+(\w+)\s+VALUES\s*\((.*)\)/i);
+                if (!match) throw new Error("SQL Syntax Error: Invalid INSERT INTO schema pattern.");
+                
+                const tableName = match[1].toLowerCase();
+                if (!(tableName in this.tables)) throw new Error(`Runtime Error: Relation table "${tableName}" does not exist.`);
+                
+                const table = this.tables[tableName];
+                const cleanValues = match[2].split(',').map(v => {
+                    let s = v.trim().replace(/['"]/g, '');
+                    return isNaN(s) ? s : Number(s);
+                });
+
+                if (cleanValues.length !== table.columns.length) {
+                    throw new Error(`Data Integrity Error: Column/Value count mismatch for execution.`);
+                }
+
+                let newRow = {};
+                table.columns.forEach((col, idx) => { newRow[col] = cleanValues[idx]; });
+
+                // Enforce primary key constraint validation checks
+                if (table.primaryKey) {
+                    const pkVal = newRow[table.primaryKey];
+                    const duplicate = table.rows.some(r => r[table.primaryKey] === pkVal);
+                    if (duplicate) throw new Error(`Constraint Error: Duplicate primary key value entry detected for "${table.primaryKey}" (${pkVal}).`);
+                }
+
+                table.rows.push(newRow);
+                return { type: 'MSG', text: `Row tuple committed to table "${tableName}".` };
+            }
+
+            handleSelect(query) {
+                // High-performance parser matching standard selection projections or inner relational joins
+                const joinMatch = query.match(/SELECT\s+(.+)\s+FROM\s+(\w+)\s+INNER\s+JOIN\s+(\w+)\s+ON\s+(.+)\.(\w+)\s*==\s*(.+)\.(\w+)/i);
+
+                if (joinMatch) {
+                    return this.processInnerJoin(joinMatch);
+                }
+
+                // Fallback process standard simple table selection filtering
+                const simpleMatch = query.match(/SELECT\s+(.+)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?/i);
+                if (!simpleMatch) throw new Error("SQL Parsing Exception: Invalid query layout specification.");
+
+                const fields = simpleMatch[1].split(',').map(f => f.trim().toLowerCase());
+                const tName = simpleMatch[2].toLowerCase();
+                if (!(tName in this.tables)) throw new Error(`Table "${tName}" not found.`);
+                
+                let resultRows = this.tables[tName].rows.map(row => {
+                    let out = {};
+                    fields.forEach(f => { out[f] = row[f]; });
+                    return out;
+                });
+
+                return { type: 'TABLE', headers: fields, rows: resultRows };
+            }
+
+            processInnerJoin(match) {
+                const fields = match[1].split(',').map(f => f.trim());
+                const t1Name = match[2].toLowerCase();
+                const t2Name = match[3].toLowerCase();
+                
+                const table1Key = match[5].toLowerCase();
+                const table2Key = match[7].toLowerCase();
+
+                if (!(t1Name in this.tables) || ! (t2Name in this.tables)) {
+                    throw new Error("Relational Error: Missing matching join entity targets.");
+                }
+
+                const t1 = this.tables[t1Name];
+                const t2 = this.tables[t2Name];
+                let joinedRows = [];
+
+                // Execute standard nested loop join mapping matching criteria values keys
+                t1.rows.forEach(r1 => {
+                    t2.rows.forEach(r2 => {
+                        if (r1[table1Key] === r2[table2Key]) {
+                            // Merge schemas safely prefixing tracking domains identifiers
+                            let combinedRow = {};
+                            Object.keys(r1).forEach(k => combinedRow[`${t1Name}.${k}`] = r1[k]);
+                            Object.keys(r2).forEach(k => combinedRow[`${t2Name}.${k}`] = r2[k]);
+                            joinedRows.push(combinedRow);
+                        }
+                    });
+                });
+
+                // Project output fields explicitly filtered
+                const finalHeaders = fields.map(f => f.toLowerCase());
+                const finalRows = joinedRows.map(row => {
+                    let out = {};
+                    finalHeaders.forEach(f => { out[f] = row[f] || 'NULL'; });
+                    return out;
+                });
+
+                return { type: 'TABLE', headers: finalHeaders, rows: finalRows };
             }
         }
 
-        // =====================================================================
-        // LIVE REAL-TIME PIPELINE UI ENGINE UPDATE BINDING LINKS
-        // =====================================================================
-        function parseLiveDocument() {
-            const editorEl = document.getElementById('editor');
-            const previewEl = document.getElementById('preview-window');
-            
-            const parser = new MarkdownParser();
-            const compiledHtml = parser.parse(editorEl.value);
-            
-            previewEl.innerHTML = compiledHtml;
+        function runSQLScript() {
+            const container = document.getElementById('output-container');
+            container.innerHTML = ""; 
+
+            const lines = document.getElementById('editor').value.split('\n');
+            const db = new FullSQLDatabase();
+            let currentCmd = "";
+
+            for (let line of lines) {
+                let clean = line.replace(/--.*$/, '').trim();
+                if (!clean) continue;
+                
+                currentCmd += " " + clean;
+                if (clean.endsWith(';')) {
+                    try {
+                        const res = db.execute(currentCmd.replace(/;$/, ''));
+                        if (res.type === 'MSG') {
+                            container.innerHTML += `<div class="success">${res.text}</div>`;
+                        } else if (res.type === 'TABLE') {
+                            renderTable(container, res.headers, res.rows);
+                        }
+                    } catch (err) {
+                        container.innerHTML += `<div class="error">${err.message}</div>`;
+                        return;
+                    }
+                    currentCmd = "";
+                }
+            }
         }
 
-        // Auto-run structural parsing compiler logic on page launch right away
-        window.onload = parseLiveDocument;
+        function renderTable(target, headers, rows) {
+            if(rows.length === 0) { target.innerHTML += "<div>Empty Result Set</div>"; return; }
+            let html = '<table><tr>';
+            headers.forEach(h => html += `<th>${h.toUpperCase()}</th>`);
+            html += '</tr>';
+            rows.forEach(r => {
+                html += '<tr>';
+                headers.forEach(h => html += `<td>${r[h]}</td>`);
+                html += '</tr>';
+            });
+            html += '</table><br>';
+            target.innerHTML += html;
+        }
     </script>
 </body>
 </html>
