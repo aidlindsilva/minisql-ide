@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TinyScript Custom IDE & Interpreter</title>
+    <title>Mini-SQL Relational Database IDE</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
+            background-color: #121214;
+            color: #e1e1e6;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -16,7 +16,7 @@
             height: 100vh;
             box-sizing: border-box;
         }
-        h2 { margin-top: 0; color: #61dafb; }
+        h2 { margin-top: 0; color: #00b37e; }
         .container {
             display: flex;
             flex: 1;
@@ -31,35 +31,31 @@
         label {
             font-weight: bold;
             margin-bottom: 5px;
-            color: #a9a9a9;
+            color: #8d8d99;
         }
         textarea {
             flex: 1;
-            background-color: #2d2d2d;
-            color: #9cdcfe;
-            border: 1px solid #444;
+            background-color: #202024;
+            color: #e1e1e6;
+            border: 1px solid #323238;
             border-radius: 4px;
-            padding: 10px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 16px;
+            padding: 12px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 15px;
             resize: none;
             outline: none;
         }
-        textarea:focus { border-color: #007acc; }
-        #console {
+        textarea:focus { border-color: #00b37e; }
+        #output-container {
             flex: 1;
-            background-color: #000;
-            color: #00ff00;
-            border: 1px solid #444;
+            background-color: #121214;
+            border: 1px solid #323238;
             border-radius: 4px;
-            padding: 10px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
+            padding: 12px;
             overflow-y: auto;
-            white-space: pre-wrap;
         }
         button {
-            background-color: #007acc;
+            background-color: #00b37e;
             color: white;
             border: none;
             padding: 12px 20px;
@@ -70,276 +66,220 @@
             margin-top: 10px;
             transition: background 0.2s;
         }
-        button:hover { background-color: #0062a3; }
-        .error { color: #f44336; }
+        button:hover { background-color: #00875f; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background-color: #202024;
+        }
+        th, td {
+            border: 1px solid #323238;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background-color: #29292e; color: #00b37e; }
+        .error { color: #f75a68; font-family: monospace; }
+        .success { color: #00b37e; font-family: monospace; margin-bottom: 8px; }
     </style>
 </head>
 <body>
 
-    <h2>TinyScript Cloud IDE</h2>
+    <h2>Mini-SQL Engine IDE</h2>
     
     <div class="container">
         <div class="panel">
-            <label for="editor">Source Code:</label>
+            <label for="editor">SQL Script Queries:</label>
             <textarea id="editor" spellcheck="false">
-# Welcome to TinyScript!
-# You can use variables, math, loops, and ifs.
+-- Create a new relational memory entity table
+CREATE TABLE students (id, name, course, score);
 
-let x = 1;
-let target = 5;
+-- Insert row record tuples directly into table states
+INSERT INTO students VALUES (1, "Rahul", "Computer Science", 92);
+INSERT INTO students VALUES (2, "Ananya", "Information Technology", 85);
+INSERT INTO students VALUES (3, "Arjun", "Computer Science", 78);
 
-while (x <= target) {
-    if (x == 3) {
-        print("Three is a special number!");
-    } else {
-        print("Current count is:");
-        print(x);
-    }
-    x = x + 1;
-}
+-- Select and extract filtered subsets 
+SELECT name, score FROM students WHERE score > 80;
             </textarea>
-            <button onclick="runCode()">Execute Code</button>
+            <button onclick="runSQL()">Execute SQL Queries</button>
         </div>
 
         <div class="panel">
-            <label>Virtual Console Output:</label>
-            <div id="console"></div>
+            <label>Relational Query Engine Output:</label>
+            <div id="output-container"></div>
         </div>
     </div>
 
     <script>
-        const TOKEN_TYPES = {
-            KEYWORD: 'KEYWORD', IDENTIFIER: 'IDENTIFIER', NUMBER: 'NUMBER', 
-            STRING: 'STRING', ASSIGN: 'ASSIGN', OPERATOR: 'OPERATOR', 
-            PUNCTUATION: 'PUNCTUATION', EOF: 'EOF'
-        };
-
-        class Lexer {
-            constructor(source) {
-                this.source = source;
-                this.cursor = 0;
-            }
-            peek() { return this.source[this.cursor] || null; }
-            advance() { return this.source[this.cursor++]; }
-            tokenize() {
-                const tokens = [];
-                const keywords = ['let', 'print', 'if', 'else', 'while'];
-                while (this.cursor < this.source.length) {
-                    let char = this.peek();
-                    if (/\s/.test(char)) { this.advance(); continue; }
-                    if (char === '#') {
-                        while (this.peek() && this.peek() !== '\n') this.advance();
-                        continue;
-                    }
-                    if (/\d/.test(char)) {
-                        let num = '';
-                        while (this.peek() && /\d/.test(this.peek())) num += this.advance();
-                        tokens.push({ type: TOKEN_TYPES.NUMBER, value: parseInt(num) });
-                        continue;
-                    }
-                    if (/[a-zA-Z]/.test(char)) {
-                        let str = '';
-                        while (this.peek() && /[a-zA-Z0-9]/.test(this.peek())) str += this.advance();
-                        if (keywords.includes(str)) {
-                            tokens.push({ type: TOKEN_TYPES.KEYWORD, value: str });
-                        } else {
-                            tokens.push({ type: TOKEN_TYPES.IDENTIFIER, value: str });
-                        }
-                        continue;
-                    }
-                    if (char === '"') {
-                        this.advance();
-                        let str = '';
-                        while (this.peek() && this.peek() !== '"') str += this.advance();
-                        this.advance();
-                        tokens.push({ type: TOKEN_TYPES.STRING, value: str });
-                        continue;
-                    }
-                    if (char === '=' || char === '<' || char === '>') {
-                        let op = this.advance();
-                        if (this.peek() === '=') op += this.advance();
-                        tokens.push({ type: op === '=' ? TOKEN_TYPES.ASSIGN : TOKEN_TYPES.OPERATOR, value: op });
-                        continue;
-                    }
-                    if (['+', '-', '*', '/'].includes(char)) {
-                        tokens.push({ type: TOKEN_TYPES.OPERATOR, value: this.advance() });
-                        continue;
-                    }
-                    if ([';', '(', ')', '{', '}'].includes(char)) {
-                        tokens.push({ type: TOKEN_TYPES.PUNCTUATION, value: this.advance() });
-                        continue;
-                    }
-                    throw new Error(`Lexer Error: Unexpected character '${char}'`);
-                }
-                tokens.push({ type: TOKEN_TYPES.EOF, value: null });
-                return tokens;
-            }
-        }
-
-        class Parser {
-            constructor(tokens) {
-                this.tokens = tokens;
-                this.cursor = 0;
-            }
-            peek() { return this.tokens[this.cursor]; }
-            advance() { return this.tokens[this.cursor++]; }
-            match(type, value) {
-                const token = this.peek();
-                if (!token || (type && token.type !== type) || (value && token.value !== value)) return false;
-                this.advance();
-                return true;
-            }
-            parse() {
-                const statements = [];
-                while (this.peek().type !== TOKEN_TYPES.EOF) {
-                    statements.push(this.parseStatement());
-                }
-                return { type: 'Program', body: statements };
-            }
-            parseStatement() {
-                const token = this.peek();
-                if (token.type === TOKEN_TYPES.KEYWORD) {
-                    if (token.value === 'let') return this.parseVarDeclaration();
-                    if (token.value === 'print') return this.parsePrintStatement();
-                    if (token.value === 'if') return this.parseIfStatement();
-                    if (token.value === 'while') return this.parseWhileStatement();
-                }
-                if (token.type === TOKEN_TYPES.IDENTIFIER) return this.parseAssignment();
-                throw new Error(`Parser Error: Unexpected token "${token.value}"`);
-            }
-            parseVarDeclaration() {
-                this.advance();
-                const idToken = this.advance();
-                this.match(TOKEN_TYPES.ASSIGN, '=');
-                const valExpression = this.parseExpression();
-                this.match(TOKEN_TYPES.PUNCTUATION, ';');
-                return { type: 'VariableDeclaration', id: idToken.value, init: valExpression };
-            }
-            parseAssignment() {
-                const idToken = this.advance();
-                this.match(TOKEN_TYPES.ASSIGN, '=');
-                const valExpression = this.parseExpression();
-                this.match(TOKEN_TYPES.PUNCTUATION, ';');
-                return { type: 'Assignment', id: idToken.value, value: valExpression };
-            }
-            parsePrintStatement() {
-                this.advance();
-                this.match(TOKEN_TYPES.PUNCTUATION, '(');
-                const expr = this.parseExpression();
-                this.match(TOKEN_TYPES.PUNCTUATION, ')');
-                this.match(TOKEN_TYPES.PUNCTUATION, ';');
-                return { type: 'PrintStatement', expression: expr };
-            }
-            parseIfStatement() {
-                this.advance();
-                this.match(TOKEN_TYPES.PUNCTUATION, '(');
-                const test = this.parseExpression();
-                this.match(TOKEN_TYPES.PUNCTUATION, ')');
-                this.match(TOKEN_TYPES.PUNCTUATION, '{');
-                const consequent = [];
-                while (this.peek().value !== '}') consequent.push(this.parseStatement());
-                this.match(TOKEN_TYPES.PUNCTUATION, '}');
-                let alternate = null;
-                if (this.peek().value === 'else') {
-                    this.advance();
-                    this.match(TOKEN_TYPES.PUNCTUATION, '{');
-                    alternate = [];
-                    while (this.peek().value !== '}') alternate.push(this.parseStatement());
-                    this.match(TOKEN_TYPES.PUNCTUATION, '}');
-                }
-                return { type: 'IfStatement', test, consequent, alternate };
-            }
-            parseWhileStatement() {
-                this.advance();
-                this.match(TOKEN_TYPES.PUNCTUATION, '(');
-                const test = this.parseExpression();
-                this.match(TOKEN_TYPES.PUNCTUATION, ')');
-                this.match(TOKEN_TYPES.PUNCTUATION, '{');
-                const body = [];
-                while (this.peek().value !== '}') body.push(this.parseStatement());
-                this.match(TOKEN_TYPES.PUNCTUATION, '}');
-                return { type: 'WhileStatement', test, body };
-            }
-            parseExpression() {
-                let left = this.parsePrimary();
-                while (this.peek().type === TOKEN_TYPES.OPERATOR) {
-                    let op = this.advance().value;
-                    let right = this.parsePrimary();
-                    left = { type: 'BinaryExpression', operator: op, left, right };
-                }
-                return left;
-            }
-            parsePrimary() {
-                const token = this.advance();
-                if (token.type === TOKEN_TYPES.NUMBER || token.type === TOKEN_TYPES.STRING) return { type: 'Literal', value: token.value };
-                if (token.type === TOKEN_TYPES.IDENTIFIER) return { type: 'Identifier', name: token.value };
-                throw new Error(`Parser Error: Expected variable or value but got "${token.value}"`);
-            }
-        }
-
-        class Interpreter {
+        class MiniSQLDatabase {
             constructor() {
-                this.environment = {}; 
-                this.consoleOutput = [];
+                this.tables = {}; // Standard raw memory cache mapping rows
             }
-            execute(node) {
-                switch(node.type) {
-                    case 'Program': for (let stmt of node.body) this.execute(stmt); break;
-                    case 'VariableDeclaration': this.environment[node.id] = this.evaluate(node.init); break;
-                    case 'Assignment':
-                        if (!(node.id in this.environment)) throw new Error(`Runtime Error: Variable "${node.id}" is not defined.`);
-                        this.environment[node.id] = this.evaluate(node.value);
-                        break;
-                    case 'PrintStatement': this.consoleOutput.push(this.evaluate(node.expression)); break;
-                    case 'IfStatement':
-                        if (this.evaluate(node.test)) {
-                            for (let stmt of node.consequent) this.execute(stmt);
-                        } else if (node.alternate) {
-                            for (let stmt of node.alternate) this.execute(stmt);
-                        }
-                        break;
-                    case 'WhileStatement':
-                        let safety = 0;
-                        while (this.evaluate(node.test)) {
-                            if (++safety > 5000) throw new Error("Runtime Error: Infinite Loop detected!");
-                            for (let stmt of node.body) this.execute(stmt);
-                        }
-                        break;
+
+            execute(queryStr) {
+                const cleanQuery = queryStr.trim().replace(/;$/, '');
+                
+                if (cleanQuery.toUpperCase().startsWith('CREATE TABLE')) {
+                    return this.handleCreate(cleanQuery);
+                } 
+                else if (cleanQuery.toUpperCase().startsWith('INSERT INTO')) {
+                    return this.handleInsert(cleanQuery);
+                } 
+                else if (cleanQuery.toUpperCase().startsWith('SELECT')) {
+                    return this.handleSelect(cleanQuery);
                 }
+                throw new Error(`SQL Engine Syntax Error: Unsupported or invalid command starting statement.`);
             }
-            evaluate(node) {
-                switch(node.type) {
-                    case 'Literal': return node.value;
-                    case 'Identifier':
-                        if (!(node.name in this.environment)) throw new Error(`Runtime Error: Undefined variable "${node.name}"`);
-                        return this.environment[node.name];
-                    case 'BinaryExpression':
-                        const left = this.evaluate(node.left);
-                        const right = this.evaluate(node.right);
-                        switch(node.operator) {
-                            case '+': return left + right; case '-': return left - right;
-                            case '*': return left * right; case '/': return left / right;
-                            case '==': return left === right; case '<=': return left <= right;
-                            case '>=': return left >= right; case '<': return left < right;
-                            case '>': return left > right;
+
+            handleCreate(query) {
+                const match = query.match(/CREATE\s+TABLE\s+(\w+)\s*\((.*)\)/i);
+                if (!match) throw new Error("SQL Syntax Error: Invalid CREATE TABLE statement format.");
+                
+                const tableName = match[1].toLowerCase();
+                const columns = match[2].split(',').map(c => c.trim().toLowerCase());
+                
+                this.tables[tableName] = { columns: columns, rows: [] };
+                return { type: 'MSG', text: `Table "${tableName}" created successfully.` };
+            }
+
+            handleInsert(query) {
+                const match = query.match(/INSERT\s+INTO\s+(\w+)\s+VALUES\s*\((.*)\)/i);
+                if (!match) throw new Error("SQL Syntax Error: Invalid INSERT INTO statement format.");
+                
+                const tableName = match[1].toLowerCase();
+                if (!(tableName in this.tables)) throw new Error(`Runtime Error: Table "${tableName}" does not exist.`);
+                
+                // Parse out values safely removing wrapper string quotes
+                const rawValues = match[2].split(',');
+                const cleanValues = rawValues.map(v => {
+                    let item = v.trim();
+                    if (item.startsWith('"') && item.endsWith('"')) return item.slice(1, -1);
+                    if (item.startsWith("'") && item.endsWith("'")) return item.slice(1, -1);
+                    return isNaN(item) ? item : Number(item);
+                });
+
+                const table = this.tables[tableName];
+                if (cleanValues.length !== table.columns.length) {
+                    throw new Error(`Data Error: Value count mismatch. Expected ${table.columns.length} values.`);
+                }
+
+                // Map row array values directly into column dictionary objects
+                let rowObject = {};
+                table.columns.forEach((col, index) => {
+                    rowObject[col] = cleanValues[index];
+                });
+
+                table.rows.push(rowObject);
+                return { type: 'MSG', text: `1 row inserted into "${tableName}".` };
+            }
+
+            handleSelect(query) {
+                const match = query.match(/SELECT\s+(.+)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?/i);
+                if (!match) throw new Error("SQL Syntax Error: Invalid SELECT statement format.");
+
+                const fields = match[1].split(',').map(f => f.trim().toLowerCase());
+                const tableName = match[2].toLowerCase();
+                const whereClause = match[3];
+
+                if (!(tableName in this.tables)) throw new Error(`Runtime Error: Table "${tableName}" does not exist.`);
+                const table = this.tables[tableName];
+
+                // Determine target selection columns output layout
+                const outputColumns = fields[0] === '*' ? table.columns : fields;
+
+                // Process rows passing evaluation filter conditions matching WHERE criteria
+                let filteredRows = table.rows;
+                if (whereClause) {
+                    const condMatch = whereClause.match(/(\w+)\s*([>=<!]+)\s*(.+)/);
+                    if (!condMatch) throw new Error("SQL Engine Error: Only simple WHERE filters are supported (e.g., column > value).");
+                    
+                    const colName = condMatch[1].toLowerCase();
+                    const operator = condMatch[2];
+                    let val = condMatch[3].trim().replace(/['"]/g, '');
+                    val = isNaN(val) ? val : Number(val);
+
+                    filteredRows = table.rows.filter(row => {
+                        const cell = row[colName];
+                        switch (operator) {
+                            case '=':  return cell === val;
+                            case '==': return cell === val;
+                            case '>':  return cell > val;
+                            case '<':  return cell < val;
+                            case '>=': return cell >= val;
+                            case '<=': return cell <= val;
+                            default: return false;
                         }
+                    });
+                }
+
+                // Compile result schema matrix mapping 
+                const resultData = filteredRows.map(row => {
+                    let projectedRow = {};
+                    outputColumns.forEach(col => { projectedRow[col] = row[col]; });
+                    return projectedRow;
+                });
+
+                return { type: 'TABLE', headers: outputColumns, rows: resultData };
+            }
+        }
+
+        // =====================================================================
+        // CORE IDE UI RENDER PIPELINE
+        // =====================================================================
+        function runSQL() {
+            const container = document.getElementById('output-container');
+            container.innerHTML = ""; // Flush previous dashboard layout
+
+            const lines = document.getElementById('editor').value.split('\n');
+            const db = new MiniSQLDatabase();
+
+            let currentStatement = "";
+
+            for (let line of lines) {
+                let cleanLine = line.replace(/--.*$/, '').trim(); // Strip comment blocks lines
+                if (!cleanLine) continue;
+
+                currentStatement += " " + cleanLine;
+
+                // Check statement closure terminator semicolon token 
+                if (cleanLine.endsWith(';')) {
+                    try {
+                        const result = db.execute(currentStatement);
+                        
+                        if (result.type === 'MSG') {
+                            container.innerHTML += `<div class="success">${result.text}</div>`;
+                        } 
+                        else if (result.type === 'TABLE') {
+                            renderHTMLTable(container, result.headers, result.rows);
+                        }
+                    } catch (err) {
+                        container.innerHTML += `<div class="error">${err.message}</div>`;
+                        return; // Halt script execution pipeline parsing cascade on exception trace
+                    }
+                    currentStatement = ""; // Clear buffer queue target pointer location
                 }
             }
         }
 
-        function runCode() {
-            const consoleDiv = document.getElementById('console');
-            consoleDiv.innerHTML = "Compiling and executing...\n";
-            const rawCode = document.getElementById('editor').value;
-            try {
-                const tokens = new Lexer(rawCode).tokenize();
-                const ast = new Parser(tokens).parse();
-                const interpreter = new Interpreter();
-                interpreter.execute(ast);
-                consoleDiv.innerHTML = interpreter.consoleOutput.join('\n');
-            } catch (err) {
-                consoleDiv.innerHTML = `<span class="error">${err.message}</span>`;
+        function renderHTMLTable(targetEl, headers, rows) {
+            if (rows.length === 0) {
+                targetEl.innerHTML += `<div class="success">Query returned 0 record rows matching criteria.</div>`;
+                return;
             }
+
+            let html = '<table><tr>';
+            headers.forEach(h => { html += `<th>${h.toUpperCase()}</th>`; });
+            html += '</tr>';
+
+            rows.forEach(row => {
+                html += '<tr>';
+                headers.forEach(h => { html += `<td>${row[h] !== undefined ? row[h] : 'NULL'}</td>`; });
+                html += '</tr>';
+            });
+
+            html += '</table><br>';
+            targetEl.innerHTML += html;
         }
     </script>
 </body>
